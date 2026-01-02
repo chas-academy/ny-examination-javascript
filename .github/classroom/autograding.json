@@ -1,7 +1,7 @@
 {
   "tests": [
     {
-      "name": "Inkomst: Lägg till i listan (10p)",
+      "name": "Inkomst: Lägg till i income (10p)",
       "setup": "npm install",
       "run": "npx jest -t 'Should add an item to the income list'",
       "input": "",
@@ -21,7 +21,7 @@
       "points": 10
     },
     {
-      "name": "Utgift: Lägg till i listan (10p)",
+      "name": "Utgift: Lägg till i expense (10p)",
       "setup": "",
       "run": "npx jest -t 'Should add an item to the expense list'",
       "input": "",
