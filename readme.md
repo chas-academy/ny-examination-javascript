@@ -45,8 +45,8 @@ Beroende på vilken knapp som klickas ska en ny rad (`<li>`) läggas till i mots
 - **(10p)** Klick på "Inkomst" lägger till rad i inkomstlistan.
 - **(10p)** Klick på "Utgift" lägger till rad i utgiftslistan.
 - **(10p)** **Viktigt:** Texten i listpunkten måste följa detta format **exakt**:
-  - För inkomst: `Beskrivning - Belopp kr (Inkomst)`
-  - För utgift: `Beskrivning - Belopp kr (Utgift)`
+    - För inkomst: `Beskrivning - Belopp kr (Inkomst)`
+    - För utgift: `Beskrivning - Belopp kr (Utgift)`
 
 ### 3. Beräkna Saldo (20p)
 
@@ -69,5 +69,17 @@ Förutom koden ska du spela in en kort skärminspelning där du demonstrerar din
 2.  Döp filen till exakt: `videoprov.mp4` (eller `.mov`).
 3.  Lägg filen i rotmappen (samma ställe som denna README och `package.json`).
 4.  **OBS:** Filen får inte vara större än 100MB.
+
+---
+
+## Hur du testar din kod
+
+För att se om du klarar kraven kan du köra de automatiska testerna.
+
+1.  Öppna en terminal.
+2.  Kör kommandot: `npm install` (behövs bara göras en gång).
+3.  Kör kommandot: `npm test`
+
+Om alla tester är gröna (PASS) är du klar!
 
 Lycka till!
