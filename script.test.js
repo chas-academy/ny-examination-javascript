@@ -57,6 +57,10 @@
 //     expect(document.getElementById("balance").textContent).toBe(`-${amount}`);
 //   });
 // });
+
+const fs = require("fs");
+const path = require("path");
+
 /**
  * @jest-environment jsdom
  */
@@ -227,5 +231,35 @@ describe("Budget App Assessment", () => {
       document.getElementById("incomeList").children.length === 0;
     expect(isSafe).toBe(true);
     expect(balance.textContent).not.toBe("NaN");
+  });
+
+  // --- KATEGORI 4: Inlämning av video (20p) ---
+
+  test("Should contain a video file named 'videoprov'", () => {
+    // Lista på godkända format. Ta bort .mov om du vill vara strikt med bara .mp4
+    const validExtensions = [".mp4"];
+    const requiredName = "videoprov";
+
+    // Hämta alla filer i rotmappen (där package.json ligger)
+    const filesInRoot = fs.readdirSync(".");
+
+    // Leta efter en fil som heter "videoprov" OCH har rätt ändelse
+    const videoFileFound = filesInRoot.find((file) => {
+      const ext = path.extname(file).toLowerCase();
+      const name = path.basename(file, ext); // Filnamn utan ändelse
+
+      // Kollar att namnet är exakt "videoprov" och ändelsen är godkänd
+      return name === requiredName && validExtensions.includes(ext);
+    });
+
+    // Om ingen fil hittas, kasta ett tydligt fel
+    if (!videoFileFound) {
+      throw new Error(
+        `Kunde inte hitta filen 'videoprov.mp4' i rotmappen. Kontrollera namnet!`
+      );
+    }
+
+    // Om vi kommer hit så finns filen
+    expect(videoFileFound).toBeTruthy();
   });
 });
