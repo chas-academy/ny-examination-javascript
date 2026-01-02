@@ -9,7 +9,7 @@ describe("Budget App Assessment", () => {
   let isStudentIdValid = false;
   let validationError = "";
 
-  // --- STEG 1: PORTVAKTEN (Körs en gång innan allt annat) ---
+  // --- STEG 1: PORTVAKTEN ---
   beforeAll(() => {
     try {
       const studentIdPath = path.join(__dirname, "src/student-id.js");
@@ -21,7 +21,6 @@ describe("Budget App Assessment", () => {
 
       const fileContent = fs.readFileSync(studentIdPath, "utf-8");
 
-      //  Kolla efter förbjudna fraser direkt i källkoden
       if (fileContent.includes("PUT_YOUR_ID_HERE")) {
         validationError =
           "Du har inte bytt ut 'PUT_YOUR_ID_HERE' mot ditt eget ID.";
@@ -38,7 +37,7 @@ describe("Budget App Assessment", () => {
     }
   });
 
-  // --- STEG 2: FÖRBEREDELSER (Körs inför VARJE test) ---
+  // --- STEG 2: FÖRBEREDELSER ---
   beforeEach(() => {
     if (!isStudentIdValid) {
       throw new Error(
@@ -57,7 +56,6 @@ describe("Budget App Assessment", () => {
       <div id="balance">0</div>
     `;
 
-    // Vi måste ladda filerna för att funktionerna ska finnas i DOM:en
     try {
       require("./src/student-id.js");
     } catch (e) {}
@@ -69,11 +67,12 @@ describe("Budget App Assessment", () => {
   // --- STEG 3: TESTER ---
 
   test("1. Setup & ID Kontroll (Obligatorisk)", () => {
-    // Detta test passerar bara om beforeAll godkände ID:t
     expect(isStudentIdValid).toBe(true);
   });
 
-  // --- KATEGORI 1: Grundläggande Funktionalitet ---
+  // ==========================================================
+  // KATEGORI 1: LOGIK (Snälla tester - Ger poäng för att det funkar)
+  // ==========================================================
 
   test("Should add an item to the income list", () => {
     document.getElementById("desc").value = "Lön";
@@ -81,8 +80,23 @@ describe("Budget App Assessment", () => {
     document.getElementById("incomeBtn").click();
 
     const list = document.getElementById("incomeList");
+
+    // SNÄLLT: Vi kollar bara att det lades till en rad (oavsett text)
     expect(list.children.length).toBe(1);
-    expect(list.textContent).toContain("Lön");
+    // SNÄLLT: Vi kollar att beloppet finns där, struntar i om det står "Inkomsts"
+    expect(list.textContent).toContain("20000");
+  });
+
+  test("Should add an item to the expense list", () => {
+    document.getElementById("desc").value = "Hyra";
+    document.getElementById("amount").value = "5000";
+    document.getElementById("expenseBtn").click();
+
+    const list = document.getElementById("expenseList");
+
+    // SNÄLLT: kollar bara att logiken kördes
+    expect(list.children.length).toBe(1);
+    expect(list.textContent).toContain("5000");
   });
 
   test("Should increase balance when income is added", () => {
@@ -94,23 +108,15 @@ describe("Budget App Assessment", () => {
     expect(balance.textContent).toBe("500");
   });
 
-  test("Should add an item to the expense list", () => {
-    document.getElementById("desc").value = "Hyra";
-    document.getElementById("amount").value = "5000";
-    document.getElementById("expenseBtn").click();
-
-    const list = document.getElementById("expenseList");
-    expect(list.children.length).toBe(1);
-    expect(list.textContent).toContain("Hyra");
-  });
-
   test("Should decrease balance when expense is added", () => {
+    // Först inkomst för att ha pengar
     const desc = document.getElementById("desc");
     const amount = document.getElementById("amount");
     desc.value = "Start";
     amount.value = "1000";
     document.getElementById("incomeBtn").click();
 
+    // Sen utgift
     desc.value = "Mat";
     amount.value = "200";
     document.getElementById("expenseBtn").click();
@@ -119,7 +125,32 @@ describe("Budget App Assessment", () => {
     expect(balance.textContent).toBe("800");
   });
 
-  // --- KATEGORI 2: UX och Format ---
+  // ==========================================================
+  // KATEGORI 2: FORMAT & UX (Hårda tester - Kräver exakthet)
+  // ==========================================================
+
+  test("Should format the list item text correctly", () => {
+    // 1. Testa INKOMST (Strikt Regex)
+    document.getElementById("desc").value = "Lön";
+    document.getElementById("amount").value = "100";
+    document.getElementById("incomeBtn").click();
+
+    const incomeItem = document
+      .getElementById("incomeList")
+      .querySelector("li");
+
+    expect(incomeItem.textContent).toMatch(/Lön - 100 kr \(Inkomst\)/);
+
+    // 2. Testa UTGIFT (Strikt Regex)
+    document.getElementById("desc").value = "Kaffe";
+    document.getElementById("amount").value = "50";
+    document.getElementById("expenseBtn").click();
+
+    const expenseItem = document
+      .getElementById("expenseList")
+      .querySelector("li");
+    expect(expenseItem.textContent).toMatch(/Kaffe - 50 kr \(Utgift\)/);
+  });
 
   test("Should clear input fields after adding transaction", () => {
     const desc = document.getElementById("desc");
@@ -133,16 +164,9 @@ describe("Budget App Assessment", () => {
     expect(amount.value).toBe("");
   });
 
-  test("Should format the list item text correctly", () => {
-    document.getElementById("desc").value = "Kaffe";
-    document.getElementById("amount").value = "50";
-    document.getElementById("expenseBtn").click();
-
-    const listItem = document.getElementById("expenseList").querySelector("li");
-    expect(listItem.textContent).toMatch(/Kaffe - 50 kr \(Utgift\)/);
-  });
-
-  // --- KATEGORI 3: Validering ---
+  // ==========================================================
+  // KATEGORI 3: VALIDERING (Regler)
+  // ==========================================================
 
   test("Should NOT add transaction if inputs are empty", () => {
     document.getElementById("desc").value = "";
@@ -166,18 +190,17 @@ describe("Budget App Assessment", () => {
     expect(balance.textContent).not.toBe("NaN");
   });
 
-  // --- KATEGORI 4: Inlämning av video (20p) ---
+  // ==========================================================
+  // KATEGORI 4: VIDEO
+  // ==========================================================
 
   test("Should contain a video file named 'videoprov'", () => {
     const validExtensions = [".mp4"];
     const requiredName = "videoprov";
 
-    // Hämta alla filer i rotmappen
-    // __dirname är mappen där testet ligger, vi vill kolla roten så vi går upp ett steg om testet ligger i en undermapp,
     const rootDir = process.cwd();
     const filesInRoot = fs.readdirSync(rootDir);
 
-    // Leta efter filen
     const videoFileFound = filesInRoot.find((file) => {
       const ext = path.extname(file).toLowerCase();
       const name = path.basename(file, ext);
