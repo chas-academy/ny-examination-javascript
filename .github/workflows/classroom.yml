@@ -1,0 +1,141 @@
+name: Autograding Tests
+'on':
+  - push
+  - repository_dispatch
+
+permissions:
+  checks: write
+  actions: read
+  contents: read
+
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Installera beroenden
+      run: npm install
+
+    # --- TEST 1: PORTVAKTEN (Stoppar allt om den misslyckas) ---
+    - name: '1. Setup & ID Kontroll (Obligatorisk)'
+      id: id-check
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: '1. Setup & ID Kontroll (Obligatorisk)'
+        setup-command: ''
+        command: npx jest -t '1. Setup & ID Kontroll'
+        timeout: 10
+        max-score: 0
+      # OBS: Ingen continue-on-error här. Misslyckas ID = Krasch.
+
+    # --- HÄRIFRÅN DELAS POÄNG UT (continue-on-error: true) ---
+
+    - name: 'Validering: Tomma fält (10p)'
+      id: val-empty
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: 'Validering: Tomma fält (10p)'
+        command: npx jest -t 'Should NOT add transaction if inputs are empty'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: 'Validering: Felaktiga tal (10p)'
+      id: val-numbers
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: 'Validering: Felaktiga tal (10p)'
+        command: npx jest -t 'Should handle invalid numbers gracefully'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: 'Inkomst: Lägg till i listan (10p)'
+      id: income-add
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: 'Inkomst: Lägg till i listan (10p)'
+        command: npx jest -t 'Should add an item to the income list'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: 'Utgift: Lägg till i listan (10p)'
+      id: expense-add
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: 'Utgift: Lägg till i listan (10p)'
+        command: npx jest -t 'Should add an item to the expense list'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: 'Format: Rätt textformat (10p)'
+      id: format-check
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: 'Format: Rätt textformat (10p)'
+        command: npx jest -t 'Should format the list item text correctly'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: 'Inkomst: Uppdatera saldo (10p)'
+      id: income-balance
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: 'Inkomst: Uppdatera saldo (10p)'
+        command: npx jest -t 'Should increase balance when income is added'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: 'Utgift: Uppdatera saldo (10p)'
+      id: expense-balance
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: 'Utgift: Uppdatera saldo (10p)'
+        command: npx jest -t 'Should decrease balance when expense is added'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: 'UX: Töm fält efter köp (10p)'
+      id: ux-clear
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: 'UX: Töm fält efter köp (10p)'
+        command: npx jest -t 'Should clear input fields after adding transaction'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: 'Inlämning: Videoprov (20p)'
+      id: video-check
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: 'Inlämning: Videoprov (20p)'
+        command: npx jest -t 'Should contain a video file named'
+        timeout: 10
+        max-score: 20
+      continue-on-error: true
+
+    # --- SUMMERING AV POÄNG ---
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        ID-CHECK_RESULTS: "${{ steps.id-check.outputs.result }}"
+        VAL-EMPTY_RESULTS: "${{ steps.val-empty.outputs.result }}"
+        VAL-NUMBERS_RESULTS: "${{ steps.val-numbers.outputs.result }}"
+        INCOME-ADD_RESULTS: "${{ steps.income-add.outputs.result }}"
+        EXPENSE-ADD_RESULTS: "${{ steps.expense-add.outputs.result }}"
+        FORMAT-CHECK_RESULTS: "${{ steps.format-check.outputs.result }}"
+        INCOME-BALANCE_RESULTS: "${{ steps.income-balance.outputs.result }}"
+        EXPENSE-BALANCE_RESULTS: "${{ steps.expense-balance.outputs.result }}"
+        UX-CLEAR_RESULTS: "${{ steps.ux-clear.outputs.result }}"
+        VIDEO-CHECK_RESULTS: "${{ steps.video-check.outputs.result }}"
+      with:
+        runners: id-check,val-empty,val-numbers,income-add,expense-add,format-check,income-balance,expense-balance,ux-clear,video-check
