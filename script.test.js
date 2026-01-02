@@ -57,10 +57,60 @@
 //     expect(document.getElementById("balance").textContent).toBe(`-${amount}`);
 //   });
 // });
+/**
+ * @jest-environment jsdom
+ */
 
 describe("Budget App Assessment", () => {
-  // Återställ DOM och ladda om scriptet inför VARJE test
+  let isStudentIdValid = false;
+  let validationError = "";
+
+  // --- STEG 1: PORTVAKTEN (Körs en gång innan allt annat) ---
+  beforeAll(() => {
+    // 1. Försök ladda student-id filen
+    try {
+      jest.isolateModules(() => {
+        require("./src/student-id.js");
+      });
+    } catch (e) {
+      validationError = "Filen 'src/student-id.js' saknas.";
+      return; // Avbryt kontrollen, flaggan förblir false
+    }
+
+    // 2. Hämta ID från global eller window
+    let id = null;
+    if (typeof globalThis !== "undefined" && "STUDENT_ID" in globalThis) {
+      id = globalThis.STUDENT_ID;
+    } else if (typeof window !== "undefined" && "STUDENT_ID" in window) {
+      id = window.STUDENT_ID;
+    }
+
+    // 3. Validera ID:t strikt
+    if (!id) {
+      validationError = "Variabeln STUDENT_ID hittades inte.";
+    } else if (typeof id !== "string") {
+      validationError = "STUDENT_ID måste vara en textsträng.";
+    } else if (id === "PUT_YOUR_ID_HERE") {
+      validationError =
+        "Du har inte bytt ut 'PUT_YOUR_ID_HERE' mot ditt eget ID.";
+    } else if (id.trim().length === 0) {
+      validationError = "STUDENT_ID får inte vara tomt.";
+    } else {
+      // Allt ser bra ut! Släpp in studenten.
+      isStudentIdValid = true;
+    }
+  });
+
+  // --- STEG 2: FÖRBEREDELSER (Körs inför VARJE test) ---
   beforeEach(() => {
+    // 4. TOTAL SPÄRR: Om ID är ogiltigt, krascha alla tester direkt
+    if (!isStudentIdValid) {
+      throw new Error(
+        `⛔ STOPP! Din inlämning är inte giltig: ${validationError}`
+      );
+    }
+
+    // Om vi kommer hit är ID okej. Kör ordinarie setup.
     jest.resetModules();
     document.body.innerHTML = `
       <input id="desc" />
@@ -71,21 +121,19 @@ describe("Budget App Assessment", () => {
       <ul id="expenseList"></ul>
       <div id="balance">0</div>
     `;
+
+    // Ladda om ID och script för att simulera en "fräsch" sida
     require("./src/student-id.js");
     require("./src/script.js");
   });
 
-  test("Should include a STUDENT_ID variable for student identification", () => {
-    // The grader expects a global variable named STUDENT_ID set to identify the student.
-    // We load src/student-id.js before src/script.js to provide a placeholder if the student hasn't set it.
-    let id = null;
-    if (typeof globalThis !== "undefined" && "STUDENT_ID" in globalThis)
-      id = globalThis.STUDENT_ID;
-    else if (typeof window !== "undefined" && "STUDENT_ID" in window)
-      id = window.STUDENT_ID;
-    // Accept a non-empty string as a valid student id
-    expect(id).toBeTruthy();
-    expect(typeof id).toBe("string");
+  // --- STEG 3: TESTER ---
+
+  test("1. Setup & ID Kontroll (Obligatorisk)", () => {
+    // Detta test kommer bara passera om beforeAll lyckades sätta flaggan till true.
+    // Om flaggan är false har beforeEach redan kastat ett error, så vi kommer inte ens hit.
+    expect(isStudentIdValid).toBe(true);
+    expect(validationError).toBe("");
   });
 
   // --- KATEGORI 1: Grundläggande Funktionalitet ---
@@ -120,14 +168,12 @@ describe("Budget App Assessment", () => {
   });
 
   test("Should decrease balance when expense is added", () => {
-    // Förberedelse: Sätt ett startsaldo (1000 kr)
     const desc = document.getElementById("desc");
     const amount = document.getElementById("amount");
     desc.value = "Start";
     amount.value = "1000";
     document.getElementById("incomeBtn").click();
 
-    // Utförande: Dra av 200 kr
     desc.value = "Mat";
     amount.value = "200";
     document.getElementById("expenseBtn").click();
@@ -156,7 +202,6 @@ describe("Budget App Assessment", () => {
     document.getElementById("expenseBtn").click();
 
     const listItem = document.getElementById("expenseList").querySelector("li");
-    // Kravet från README: "Beskrivning - Belopp kr (Typ)"
     expect(listItem.textContent).toMatch(/Kaffe - 50 kr \(Utgift\)/);
   });
 
@@ -173,12 +218,10 @@ describe("Budget App Assessment", () => {
 
   test("Should handle invalid numbers gracefully", () => {
     document.getElementById("desc").value = "Fel";
-    document.getElementById("amount").value = "hej"; // Inte en siffra
+    document.getElementById("amount").value = "hej";
     document.getElementById("incomeBtn").click();
 
     const balance = document.getElementById("balance");
-
-    // Vi godkänner om saldot är oförändrat (0) ELLER om listan är tom
     const isSafe =
       balance.textContent === "0" ||
       document.getElementById("incomeList").children.length === 0;
