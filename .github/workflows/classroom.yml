@@ -7,6 +7,7 @@ permissions:
   checks: write
   actions: read
   contents: read
+  pull-requests: write
 
 jobs:
   run-autograding-tests:
@@ -19,7 +20,24 @@ jobs:
     - name: Installera beroenden
       run: npm install
 
-    # --- TEST 1: PORTVAKTEN (Stoppar allt om den misslyckas) ---
+    # --- NYTT STEG: HÄMTA ID FÖR ATT VISA I RAPPORTEN ---
+    - name: Hämta Student ID från filen
+      id: get-id
+      run: |
+        # Vi skapar en tillfällig JS-fil som bara skriver ut ID:t till konsolen
+        echo "try { require('./src/student-id.js'); if (typeof STUDENT_ID !== 'undefined') { console.log(STUDENT_ID); } else { console.log('HITTADES EJ'); } } catch (e) { console.log('FIL SAKNAS'); }" > temp_print_id.js
+        
+        # Kör filen och spara outputen i en variabel
+        EXTRACTED_ID=$(node temp_print_id.js)
+        
+        # Spara variabeln så att nästa steg kan se den
+        echo "STUDENT_ID=$EXTRACTED_ID" >> $GITHUB_ENV
+        
+        # Städa upp
+        rm temp_print_id.js
+
+    # --- TESTERNA ---
+
     - name: '1. Setup & ID Kontroll (Obligatorisk)'
       id: id-check
       uses: classroom-resources/autograding-command-grader@v1
@@ -29,11 +47,9 @@ jobs:
         command: npx jest -t '1. Setup & ID Kontroll'
         timeout: 10
         max-score: 0
-      # OBS: Ingen continue-on-error här. Misslyckas ID = Krasch.
-
-    # --- HÄRIFRÅN DELAS POÄNG UT (continue-on-error: true) ---
 
     - name: 'Validering: Tomma fält (10p)'
+      if: success() || failure()
       id: val-empty
       uses: classroom-resources/autograding-command-grader@v1
       with:
@@ -44,6 +60,7 @@ jobs:
       continue-on-error: true
 
     - name: 'Validering: Felaktiga tal (10p)'
+      if: success() || failure()
       id: val-numbers
       uses: classroom-resources/autograding-command-grader@v1
       with:
@@ -54,6 +71,7 @@ jobs:
       continue-on-error: true
 
     - name: 'Inkomst: Lägg till i listan (10p)'
+      if: success() || failure()
       id: income-add
       uses: classroom-resources/autograding-command-grader@v1
       with:
@@ -64,6 +82,7 @@ jobs:
       continue-on-error: true
 
     - name: 'Utgift: Lägg till i listan (10p)'
+      if: success() || failure()
       id: expense-add
       uses: classroom-resources/autograding-command-grader@v1
       with:
@@ -74,6 +93,7 @@ jobs:
       continue-on-error: true
 
     - name: 'Format: Rätt textformat (10p)'
+      if: success() || failure()
       id: format-check
       uses: classroom-resources/autograding-command-grader@v1
       with:
@@ -84,6 +104,7 @@ jobs:
       continue-on-error: true
 
     - name: 'Inkomst: Uppdatera saldo (10p)'
+      if: success() || failure()
       id: income-balance
       uses: classroom-resources/autograding-command-grader@v1
       with:
@@ -94,6 +115,7 @@ jobs:
       continue-on-error: true
 
     - name: 'Utgift: Uppdatera saldo (10p)'
+      if: success() || failure()
       id: expense-balance
       uses: classroom-resources/autograding-command-grader@v1
       with:
@@ -104,6 +126,7 @@ jobs:
       continue-on-error: true
 
     - name: 'UX: Töm fält efter köp (10p)'
+      if: success() || failure()
       id: ux-clear
       uses: classroom-resources/autograding-command-grader@v1
       with:
@@ -114,6 +137,7 @@ jobs:
       continue-on-error: true
 
     - name: 'Inlämning: Videoprov (20p)'
+      if: success() || failure()
       id: video-check
       uses: classroom-resources/autograding-command-grader@v1
       with:
@@ -123,9 +147,11 @@ jobs:
         max-score: 20
       continue-on-error: true
 
-    # --- SUMMERING AV POÄNG ---
+    # --- RAPPORTERING ---
+
     - name: Autograding Reporter
       uses: classroom-resources/autograding-grading-reporter@v1
+      if: always()
       env:
         ID-CHECK_RESULTS: "${{ steps.id-check.outputs.result }}"
         VAL-EMPTY_RESULTS: "${{ steps.val-empty.outputs.result }}"
@@ -139,3 +165,80 @@ jobs:
         VIDEO-CHECK_RESULTS: "${{ steps.video-check.outputs.result }}"
       with:
         runners: id-check,val-empty,val-numbers,income-add,expense-add,format-check,income-balance,expense-balance,ux-clear,video-check
+
+    # --- SKAPA KOMMENTAR PÅ PR ---
+    - name: Skapa kommentar med resultat
+      if: always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const totalPoints = 100;
+          let currentPoints = 0;
+          
+          // Hämta info om studenten
+          const studentUser = context.actor; // GitHub-användarnamnet
+          const studentID = process.env.STUDENT_ID || 'Kunde inte läsas';
+          
+          const getStatus = (outcome, points) => {
+            if (outcome === 'success') {
+              currentPoints += points;
+              return '✅';
+            }
+            return '❌';
+          };
+          
+          const idCheck = '${{ steps.id-check.outcome }}';
+          const valEmpty = getStatus('${{ steps.val-empty.outcome }}', 10);
+          const valNumbers = getStatus('${{ steps.val-numbers.outcome }}', 10);
+          const incAdd = getStatus('${{ steps.income-add.outcome }}', 10);
+          const expAdd = getStatus('${{ steps.expense-add.outcome }}', 10);
+          const format = getStatus('${{ steps.format-check.outcome }}', 10);
+          const incBal = getStatus('${{ steps.income-balance.outcome }}', 10);
+          const expBal = getStatus('${{ steps.expense-balance.outcome }}', 10);
+          const ux = getStatus('${{ steps.ux-clear.outcome }}', 10);
+          
+          let videoStatus = '❌ (SAKNAS)';
+          if ('${{ steps.video-check.outcome }}' === 'success') {
+             currentPoints += 20;
+             videoStatus = '✅ (20p)';
+          }
+
+          let body = `## 🤖 Rättningsroboten har talat!\n\n`;
+          
+          // Här lägger vi in studentens info i toppen av tabellen
+          body += `👤 **Student:** @${studentUser}\n`;
+          body += `🆔 **Ansöknings-ID:** \`${studentID}\`\n\n`;
+          
+          if (idCheck !== 'success') {
+             body += `### ⛔ STOPP! ID-kontrollen misslyckades.\n`;
+             body += `Du har inte angett ett giltigt ID i \`src/student-id.js\` eller så saknas 'npm install'. Inga andra tester kunde köras.`;
+          } else {
+             body += `### 🏆 Totalt resultat: ${currentPoints} / ${totalPoints} poäng\n\n`;
+             body += `| Uppgift | Status | Värde |\n| :--- | :---: | :---: |\n`;
+             body += `| **1. Setup & ID** | ✅ | **GK** |\n`;
+             body += `| Validering: Tomma fält | ${valEmpty} | 10p |\n`;
+             body += `| Validering: Felaktiga tal | ${valNumbers} | 10p |\n`;
+             body += `| Inkomst: Lägg till | ${incAdd} | 10p |\n`;
+             body += `| Utgift: Lägg till | ${expAdd} | 10p |\n`;
+             body += `| Format: Textformat | ${format} | 10p |\n`;
+             body += `| Inkomst: Saldo | ${incBal} | 10p |\n`;
+             body += `| Utgift: Saldo | ${expBal} | 10p |\n`;
+             body += `| UX: Töm fält | ${ux} | 10p |\n`;
+             body += `| **VIDEOINLÄMNING** | ${videoStatus} | **20p** |\n`;
+          }
+
+          const prs = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            head: context.sha
+          });
+
+          if (prs.data.length > 0) {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prs.data[0].number,
+              body: body
+            });
+          }
