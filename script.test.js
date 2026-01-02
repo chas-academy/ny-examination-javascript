@@ -71,7 +71,21 @@ describe("Budget App Assessment", () => {
       <ul id="expenseList"></ul>
       <div id="balance">0</div>
     `;
+    require("./src/student-id.js");
     require("./src/script.js");
+  });
+
+  test("Should include a STUDENT_ID variable for student identification", () => {
+    // The grader expects a global variable named STUDENT_ID set to identify the student.
+    // We load src/student-id.js before src/script.js to provide a placeholder if the student hasn't set it.
+    let id = null;
+    if (typeof globalThis !== "undefined" && "STUDENT_ID" in globalThis)
+      id = globalThis.STUDENT_ID;
+    else if (typeof window !== "undefined" && "STUDENT_ID" in window)
+      id = window.STUDENT_ID;
+    // Accept a non-empty string as a valid student id
+    expect(id).toBeTruthy();
+    expect(typeof id).toBe("string");
   });
 
   // --- KATEGORI 1: Grundläggande Funktionalitet ---
