@@ -1,63 +1,3 @@
-/**
- * @jest-environment jsdom
- */
-
-// In most Jest setups, you do *not* need to import { expect } from "@jest/globals";
-// Jest provides a global `expect` automatically.
-
-// ...existing code...
-// describe("Transaction functionality", () => {
-//   beforeEach(() => {
-//     jest.resetModules();
-//     document.body.innerHTML = `
-//       <input id="desc" />
-//       <input id="amount" />
-//       <button id="incomeBtn"></button>
-//       <button id="expenseBtn"></button>
-//       <ul id="incomeList"></ul>
-//       <ul id="expenseList"></ul>
-//       <div id="balance"></div>
-//     `;
-//     require("./src/script.js");
-//   });
-
-//   it("adds an income and updates balance", () => {
-//     const descInput = document.getElementById("desc");
-//     const amountInput = document.getElementById("amount");
-//     const incomeBtn = document.getElementById("incomeBtn");
-
-//     const description = "Salary";
-//     const amount = "1000";
-
-//     descInput.value = description;
-//     amountInput.value = amount;
-//     incomeBtn.click();
-
-//     expect(document.getElementById("incomeList").textContent).toContain(
-//       `${description} - ${amount} kr (Inkomst)`
-//     );
-//     expect(document.getElementById("balance").textContent).toBe(amount);
-//   });
-
-//   it("adds an expense and updates balance", () => {
-//     const descInput = document.getElementById("desc");
-//     const amountInput = document.getElementById("amount");
-//     const expenseBtn = document.getElementById("expenseBtn");
-
-//     const description = "Groceries";
-//     const amount = "200";
-
-//     descInput.value = description;
-//     amountInput.value = amount;
-//     expenseBtn.click();
-
-//     expect(document.getElementById("expenseList").textContent).toContain(
-//       `${description} - ${amount} kr (Utgift)`
-//     );
-//     expect(document.getElementById("balance").textContent).toBe(`-${amount}`);
-//   });
-// });
-
 const fs = require("fs");
 const path = require("path");
 
@@ -71,50 +11,41 @@ describe("Budget App Assessment", () => {
 
   // --- STEG 1: PORTVAKTEN (Körs en gång innan allt annat) ---
   beforeAll(() => {
-    // 1. Försök ladda student-id filen
     try {
-      jest.isolateModules(() => {
-        require("./src/student-id.js");
-      });
+      const studentIdPath = path.join(__dirname, "src/student-id.js");
+
+      if (!fs.existsSync(studentIdPath)) {
+        validationError = "Filen 'src/student-id.js' saknas helt.";
+        return;
+      }
+
+      const fileContent = fs.readFileSync(studentIdPath, "utf-8");
+
+      //  Kolla efter förbjudna fraser direkt i källkoden
+      if (fileContent.includes("PUT_YOUR_ID_HERE")) {
+        validationError =
+          "Du har inte bytt ut 'PUT_YOUR_ID_HERE' mot ditt eget ID.";
+      } else if (fileContent.includes("student-exempel-123")) {
+        validationError =
+          "Du använder exempel-ID:t. Ange ditt RIKTIGA ansökningsnummer.";
+      } else if (fileContent.includes('const STUDENT_ID = "";')) {
+        validationError = "STUDENT_ID är tomt.";
+      } else {
+        isStudentIdValid = true;
+      }
     } catch (e) {
-      validationError = "Filen 'src/student-id.js' saknas.";
-      return; // Avbryt kontrollen, flaggan förblir false
-    }
-
-    // 2. Hämta ID från global eller window
-    let id = null;
-    if (typeof globalThis !== "undefined" && "STUDENT_ID" in globalThis) {
-      id = globalThis.STUDENT_ID;
-    } else if (typeof window !== "undefined" && "STUDENT_ID" in window) {
-      id = window.STUDENT_ID;
-    }
-
-    // 3. Validera ID:t strikt
-    if (!id) {
-      validationError = "Variabeln STUDENT_ID hittades inte.";
-    } else if (typeof id !== "string") {
-      validationError = "STUDENT_ID måste vara en textsträng.";
-    } else if (id === "PUT_YOUR_ID_HERE") {
-      validationError =
-        "Du har inte bytt ut 'PUT_YOUR_ID_HERE' mot ditt eget ID.";
-    } else if (id.trim().length === 0) {
-      validationError = "STUDENT_ID får inte vara tomt.";
-    } else {
-      // Allt ser bra ut! Släpp in studenten.
-      isStudentIdValid = true;
+      validationError = `Ett tekniskt fel uppstod vid läsning av ID: ${e.message}`;
     }
   });
 
   // --- STEG 2: FÖRBEREDELSER (Körs inför VARJE test) ---
   beforeEach(() => {
-    // 4. TOTAL SPÄRR: Om ID är ogiltigt, krascha alla tester direkt
     if (!isStudentIdValid) {
       throw new Error(
         `⛔ STOPP! Din inlämning är inte giltig: ${validationError}`
       );
     }
 
-    // Om vi kommer hit är ID okej. Kör ordinarie setup.
     jest.resetModules();
     document.body.innerHTML = `
       <input id="desc" />
@@ -126,18 +57,20 @@ describe("Budget App Assessment", () => {
       <div id="balance">0</div>
     `;
 
-    // Ladda om ID och script för att simulera en "fräsch" sida
-    require("./src/student-id.js");
-    require("./src/script.js");
+    // Vi måste ladda filerna för att funktionerna ska finnas i DOM:en
+    try {
+      require("./src/student-id.js");
+    } catch (e) {}
+    try {
+      require("./src/script.js");
+    } catch (e) {}
   });
 
   // --- STEG 3: TESTER ---
 
   test("1. Setup & ID Kontroll (Obligatorisk)", () => {
-    // Detta test kommer bara passera om beforeAll lyckades sätta flaggan till true.
-    // Om flaggan är false har beforeEach redan kastat ett error, så vi kommer inte ens hit.
+    // Detta test passerar bara om beforeAll godkände ID:t
     expect(isStudentIdValid).toBe(true);
-    expect(validationError).toBe("");
   });
 
   // --- KATEGORI 1: Grundläggande Funktionalitet ---
@@ -236,30 +169,26 @@ describe("Budget App Assessment", () => {
   // --- KATEGORI 4: Inlämning av video (20p) ---
 
   test("Should contain a video file named 'videoprov'", () => {
-    // Lista på godkända format. Ta bort .mov om du vill vara strikt med bara .mp4
     const validExtensions = [".mp4"];
     const requiredName = "videoprov";
 
-    // Hämta alla filer i rotmappen (där package.json ligger)
-    const filesInRoot = fs.readdirSync(".");
+    // Hämta alla filer i rotmappen
+    // __dirname är mappen där testet ligger, vi vill kolla roten så vi går upp ett steg om testet ligger i en undermapp,
+    const rootDir = process.cwd();
+    const filesInRoot = fs.readdirSync(rootDir);
 
-    // Leta efter en fil som heter "videoprov" OCH har rätt ändelse
+    // Leta efter filen
     const videoFileFound = filesInRoot.find((file) => {
       const ext = path.extname(file).toLowerCase();
-      const name = path.basename(file, ext); // Filnamn utan ändelse
-
-      // Kollar att namnet är exakt "videoprov" och ändelsen är godkänd
+      const name = path.basename(file, ext);
       return name === requiredName && validExtensions.includes(ext);
     });
 
-    // Om ingen fil hittas, kasta ett tydligt fel
     if (!videoFileFound) {
       throw new Error(
-        `Kunde inte hitta filen 'videoprov.mp4' i rotmappen. Kontrollera namnet!`
+        "Kunde inte hitta filen 'videoprov.mp4' i rotmappen. Kontrollera namnet noga!"
       );
     }
-
-    // Om vi kommer hit så finns filen
     expect(videoFileFound).toBeTruthy();
   });
 });
