@@ -1,0 +1,35 @@
+name: "Setup Student ID"
+description: "Reads student ID from student.json"
+outputs:
+  result:
+    description: "Result of the operation"
+    value: ${{ steps.set-result.outputs.result }}
+runs:
+  using: "composite"
+  steps:
+    - name: Hämta Student ID från JSON
+      id: read-json
+      shell: bash
+      run: |
+        # 1. Kontrollera att filen finns
+        if [ ! -f student.json ]; then
+          echo "::error::Filen student.json saknas! Du måste skapa den."
+          exit 1
+        fi
+
+        # 2. Läs ut värdet med jq
+        EXTRACTED_ID=$(jq -r '.student_id' student.json)
+
+        # 3. Validera innehållet
+        if [ "$EXTRACTED_ID" == "null" ] || [ "$EXTRACTED_ID" == "SKRIV_DITT_ID_HÄR" ] || [ -z "$EXTRACTED_ID" ]; then
+           echo "::error::Du har inte fyllt i ditt ID korrekt i student.json!"
+           exit 1
+        fi
+
+        # 4. Spara till miljön
+        echo "STUDENT_ID=$EXTRACTED_ID" >> $GITHUB_ENV
+
+    - name: Sätt resultat till pass
+      id: set-result
+      shell: bash
+      run: echo "result=pass" >> $GITHUB_OUTPUT
