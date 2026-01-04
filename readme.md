@@ -66,7 +66,7 @@ Saldot (`#balance`) ska starta på 0.
 Förutom koden ska du spela in en kort skärminspelning där du demonstrerar din lösning.
 
 1.  Spela in när du lägger till en inkomst, en utgift och visar att saldot ändras.
-2.  Döp filen till exakt: `videoprov.mp4` (eller `.mov`).
+2.  Döp filen till exakt: `videoprov.mp4`.
 3.  Lägg filen i rotmappen (samma ställe som denna README och `package.json`).
 4.  **OBS:** Filen får inte vara större än 100MB.
 
@@ -74,12 +74,12 @@ Förutom koden ska du spela in en kort skärminspelning där du demonstrerar din
 
 ## Hur du testar din kod
 
-För att se om du klarar kraven kan du köra de automatiska testerna.
+Du kan testa din kod lokalt.
 
 1.  Öppna en terminal.
 2.  Kör kommandot: `npm install` (behövs bara göras en gång).
 3.  Kör kommandot: `npm test`
 
-Om alla tester är gröna (PASS) är du klar!
+Kontrollera slutligen feedback botens resultat. (Du hittar den under pull requests på github.)
 
 Lycka till!
