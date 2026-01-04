@@ -20,107 +20,28 @@ jobs:
       - name: Installera beroenden
         run: npm ci
 
-      # --- 1. SETUP OCH ID-KONTROLL ---
+      # --- 1. SETUP & ID KONTROLL ---
       - name: "1. Setup & ID Kontroll"
         id: id-check
         uses: ./.github/actions/setup-student
 
-      # --- 3. TESTER ---
-      # VIKTIGT: "id" här måste matcha "id" i grading-config.json!
+      # --- 2. KÖR TESTER & HÄMTA CONFIG ---
+      - name: Kör Grading
+        id: grading
+        uses: ./.github/actions/run-grading
 
-      - name: "Validering: Tomma fält"
-        id: val-empty
-        uses: classroom-resources/autograding-command-grader@v1
+      # --- 3. RAPPORTERING ---
+
+      - name: Rapportera till Dashboard
+        if: always()
+        uses: ./.github/actions/dashboard-reporter
         with:
-          test-name: "Validering: Tomma fält"
-          command: npx jest -t 'Should NOT add transaction if inputs are empty'
-          timeout: 10
-          max-score: 10
-        continue-on-error: true
+          steps-context: ${{ toJSON(steps) }}
+          grading-config: ${{ steps.grading.outputs.grading-config }}
 
-      - name: "Validering: Felaktiga tal"
-        id: val-numbers
-        uses: classroom-resources/autograding-command-grader@v1
-        with:
-          test-name: "Validering: Felaktiga tal"
-          command: npx jest -t 'Should handle invalid numbers gracefully'
-          timeout: 10
-          max-score: 10
-        continue-on-error: true
-
-      - name: "Inkomst: Lägg till i listan"
-        id: income-add
-        uses: classroom-resources/autograding-command-grader@v1
-        with:
-          test-name: "Inkomst: Lägg till i listan"
-          command: npx jest -t 'Should add an item to the income list'
-          timeout: 10
-          max-score: 10
-        continue-on-error: true
-
-      - name: "Utgift: Lägg till i listan"
-        id: expense-add
-        uses: classroom-resources/autograding-command-grader@v1
-        with:
-          test-name: "Utgift: Lägg till i listan"
-          command: npx jest -t 'Should add an item to the expense list'
-          timeout: 10
-          max-score: 10
-        continue-on-error: true
-
-      - name: "Format: Rätt textformat"
-        id: format-check
-        uses: classroom-resources/autograding-command-grader@v1
-        with:
-          test-name: "Format: Rätt textformat"
-          command: npx jest -t 'Should format the list item text correctly'
-          timeout: 10
-          max-score: 10
-        continue-on-error: true
-
-      - name: "Inkomst: Uppdatera saldo"
-        id: income-balance
-        uses: classroom-resources/autograding-command-grader@v1
-        with:
-          test-name: "Inkomst: Uppdatera saldo"
-          command: npx jest -t 'Should increase balance when income is added'
-          timeout: 10
-          max-score: 10
-        continue-on-error: true
-
-      - name: "Utgift: Uppdatera saldo"
-        id: expense-balance
-        uses: classroom-resources/autograding-command-grader@v1
-        with:
-          test-name: "Utgift: Uppdatera saldo"
-          command: npx jest -t 'Should decrease balance when expense is added'
-          timeout: 10
-          max-score: 10
-        continue-on-error: true
-
-      - name: "UX: Töm fält efter köp"
-        id: ux-clear
-        uses: classroom-resources/autograding-command-grader@v1
-        with:
-          test-name: "UX: Töm fält efter köp"
-          command: npx jest -t 'Should clear input fields after adding transaction'
-          timeout: 10
-          max-score: 10
-        continue-on-error: true
-
-      - name: "Inlämning: Videoprov"
-        id: video-check
-        uses: classroom-resources/autograding-command-grader@v1
-        with:
-          test-name: "Inlämning: Videoprov"
-          command: npx jest -t 'Should contain a video file named'
-          timeout: 10
-          max-score: 20
-        continue-on-error: true
-
-      # --- 4. RAPPORTERA RESULTAT ---
       - name: Skapa Feedback
         if: always()
         uses: ./.github/actions/grading-feedback
         with:
           steps-context: ${{ toJSON(steps) }}
+          grading-config: ${{ steps.grading.outputs.grading-config }}
