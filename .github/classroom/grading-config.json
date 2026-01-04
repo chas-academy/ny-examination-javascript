@@ -1,0 +1,47 @@
+[
+  {
+    "id": "val-empty",
+    "name": "Validering: Tomma fält",
+    "points": 10
+  },
+  {
+    "id": "val-numbers",
+    "name": "Validering: Felaktiga tal",
+    "points": 10
+  },
+  {
+    "id": "income-add",
+    "name": "Inkomst: Lägg till i listan",
+    "points": 10
+  },
+  {
+    "id": "expense-add",
+    "name": "Utgift: Lägg till i listan",
+    "points": 10
+  },
+  {
+    "id": "format-check",
+    "name": "Format: Rätt textformat",
+    "points": 10
+  },
+  {
+    "id": "income-balance",
+    "name": "Inkomst: Uppdatera saldo",
+    "points": 10
+  },
+  {
+    "id": "expense-balance",
+    "name": "Utgift: Uppdatera saldo",
+    "points": 10
+  },
+  {
+    "id": "ux-clear",
+    "name": "UX: Töm fält efter köp",
+    "points": 10
+  },
+  {
+    "id": "video-check",
+    "name": "Inlämning: Videoprov",
+    "points": 20
+  }
+]
