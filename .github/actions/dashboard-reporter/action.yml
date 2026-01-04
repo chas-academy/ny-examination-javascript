@@ -1,0 +1,61 @@
+name: "Dynamic Dashboard Reporter"
+description: "Reports results to GitHub Classroom Dashboard"
+inputs:
+  steps-context:
+    description: "JSON string of steps context"
+    required: true
+  grading-config:
+    description: "JSON string of grading config"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Map Results to Env
+      id: mapper
+      uses: actions/github-script@v7
+      env:
+        STEPS_CONTEXT: ${{ inputs.steps-context }}
+        GRADING_CONFIG: ${{ inputs.grading-config }}
+      with:
+        script: |
+          const steps = JSON.parse(process.env.STEPS_CONTEXT);
+
+          let tests = [];
+          try {
+            tests = JSON.parse(process.env.GRADING_CONFIG);
+          } catch (e) { console.log("Config Error: " + e.message); }
+
+          let runnerList = [];
+
+          for (const test of tests) {
+            const testId = test.id;
+            runnerList.push(testId);
+            let result = "failed";
+
+            // --- SMART SÖKNING ---
+            // 1. Direkt (om testet ligger i main-filen)
+            if (steps[testId] && steps[testId].outputs && steps[testId].outputs.result) {
+               result = steps[testId].outputs.result;
+            }
+            // 2. Nestlat (om testet ligger inuti run-grading)
+            else {
+               for (const stepKey in steps) {
+                  if (steps[stepKey].outputs && steps[stepKey].outputs[testId]) {
+                     result = steps[stepKey].outputs[testId];
+                     break;
+                  }
+               }
+            }
+            // ---------------------
+
+            // Skapa miljövariabel som Classroom-reportern letar efter (TESTID_RESULTS)
+            const envName = `${testId.toUpperCase()}_RESULTS`;
+            core.exportVariable(envName, result);
+          }
+
+          core.setOutput('runners', runnerList.join(','));
+
+    - name: Run Classroom Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      with:
+        runners: ${{ steps.mapper.outputs.runners }}
