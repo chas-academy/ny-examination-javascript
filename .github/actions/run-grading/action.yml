@@ -1,0 +1,143 @@
+name: "Run Grading Tests"
+description: "Runs all grading tests and defines the config"
+outputs:
+  # 1. EXPORTERA KONFIGURATIONEN
+  grading-config:
+    value: ${{ steps.config.outputs.json }}
+
+  # 2. EXPORTERA RESULTATEN FRÅN TESTERNA HÄR
+  val-empty:
+    value: ${{ steps.val-empty.outputs.result }}
+  val-numbers:
+    value: ${{ steps.val-numbers.outputs.result }}
+  income-add:
+    value: ${{ steps.income-add.outputs.result }}
+  expense-add:
+    value: ${{ steps.expense-add.outputs.result }}
+  format-check:
+    value: ${{ steps.format-check.outputs.result }}
+  income-balance:
+    value: ${{ steps.income-balance.outputs.result }}
+  expense-balance:
+    value: ${{ steps.expense-balance.outputs.result }}
+  ux-clear:
+    value: ${{ steps.ux-clear.outputs.result }}
+  video-check:
+    value: ${{ steps.video-check.outputs.result }}
+
+runs:
+  using: "composite"
+  steps:
+    # --- STEG 1: POÄNG OCH NAMN ---
+    - name: Set Grading Config
+      id: config
+      shell: bash
+      run: |
+        read -r -d '' JSON_BLOCK << EOM
+        [
+          { "id": "val-empty", "name": "Validering: Tomma fält", "points": 10 },
+          { "id": "val-numbers", "name": "Validering: Felaktiga tal", "points": 10 },
+          { "id": "income-add", "name": "Inkomst: Lägg till i listan", "points": 10 },
+          { "id": "expense-add", "name": "Utgift: Lägg till i listan", "points": 10 },
+          { "id": "format-check", "name": "Format: Rätt textformat", "points": 10 },
+          { "id": "income-balance", "name": "Inkomst: Uppdatera saldo", "points": 10 },
+          { "id": "expense-balance", "name": "Utgift: Uppdatera saldo", "points": 10 },
+          { "id": "ux-clear", "name": "UX: Töm fält efter köp", "points": 10 },
+          { "id": "video-check", "name": "Inlämning: Videoprov", "points": 20 }
+        ]
+        EOM
+        # Minifiera JSON och spara till output
+        COMPACT_JSON=$(echo "$JSON_BLOCK" | jq -c .)
+        echo "json=$COMPACT_JSON" >> $GITHUB_OUTPUT
+
+    # --- STEG 2: KÖR TESTERNA ---
+
+    - name: "Validering: Tomma fält"
+      id: val-empty
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: "Validering: Tomma fält"
+        command: npx jest -t 'Should NOT add transaction if inputs are empty'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: "Validering: Felaktiga tal"
+      id: val-numbers
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: "Validering: Felaktiga tal"
+        command: npx jest -t 'Should handle invalid numbers gracefully'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: "Inkomst: Lägg till i listan"
+      id: income-add
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: "Inkomst: Lägg till i listan"
+        command: npx jest -t 'Should add an item to the income list'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: "Utgift: Lägg till i listan"
+      id: expense-add
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: "Utgift: Lägg till i listan"
+        command: npx jest -t 'Should add an item to the expense list'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: "Format: Rätt textformat"
+      id: format-check
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: "Format: Rätt textformat"
+        command: npx jest -t 'Should format the list item text correctly'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: "Inkomst: Uppdatera saldo"
+      id: income-balance
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: "Inkomst: Uppdatera saldo"
+        command: npx jest -t 'Should increase balance when income is added'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: "Utgift: Uppdatera saldo"
+      id: expense-balance
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: "Utgift: Uppdatera saldo"
+        command: npx jest -t 'Should decrease balance when expense is added'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: "UX: Töm fält efter köp"
+      id: ux-clear
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: "UX: Töm fält efter köp"
+        command: npx jest -t 'Should clear input fields after adding transaction'
+        timeout: 10
+        max-score: 10
+      continue-on-error: true
+
+    - name: "Inlämning: Videoprov"
+      id: video-check
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: "Inlämning: Videoprov"
+        command: npx jest -t 'Should contain a video file named'
+        timeout: 10
+        max-score: 20
+      continue-on-error: true
