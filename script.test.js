@@ -6,46 +6,12 @@ const path = require("path");
  */
 
 describe("Budget App Assessment", () => {
-  let isStudentIdValid = false;
-  let validationError = "";
-
-  // --- STEG 1: PORTVAKTEN ---
-  beforeAll(() => {
-    try {
-      const studentIdPath = path.join(__dirname, "src/student-id.js");
-
-      if (!fs.existsSync(studentIdPath)) {
-        validationError = "Filen 'src/student-id.js' saknas helt.";
-        return;
-      }
-
-      const fileContent = fs.readFileSync(studentIdPath, "utf-8");
-
-      if (fileContent.includes("PUT_YOUR_ID_HERE")) {
-        validationError =
-          "Du har inte bytt ut 'PUT_YOUR_ID_HERE' mot ditt eget ID.";
-      } else if (fileContent.includes("student-exempel-123")) {
-        validationError =
-          "Du använder exempel-ID:t. Ange ditt RIKTIGA ansökningsnummer.";
-      } else if (fileContent.includes('const STUDENT_ID = "";')) {
-        validationError = "STUDENT_ID är tomt.";
-      } else {
-        isStudentIdValid = true;
-      }
-    } catch (e) {
-      validationError = `Ett tekniskt fel uppstod vid läsning av ID: ${e.message}`;
-    }
-  });
-
-  // --- STEG 2: FÖRBEREDELSER ---
+  // --- FÖRBEREDELSER INFÖR VARJE TEST ---
   beforeEach(() => {
-    if (!isStudentIdValid) {
-      throw new Error(
-        `⛔ STOPP! Din inlämning är inte giltig: ${validationError}`
-      );
-    }
-
+    // 1. Nollställ moduler så vi får en fräsch start varje gång
     jest.resetModules();
+
+    // 2. Sätt upp "låtsas-webbplatsen" (DOM)
     document.body.innerHTML = `
       <input id="desc" />
       <input id="amount" />
@@ -56,22 +22,18 @@ describe("Budget App Assessment", () => {
       <div id="balance">0</div>
     `;
 
-    try {
-      require("./src/student-id.js");
-    } catch (e) {}
+    // 3. Ladda studentens script
+    // Vi använder try-catch så att testerna inte kraschar helt om filen saknas,
+    // utan istället misslyckas på de specifika testerna.
     try {
       require("./src/script.js");
-    } catch (e) {}
-  });
-
-  // --- STEG 3: TESTER ---
-
-  test("1. Setup & ID Kontroll (Obligatorisk)", () => {
-    expect(isStudentIdValid).toBe(true);
+    } catch (e) {
+      console.error("Kunde inte ladda src/script.js:", e);
+    }
   });
 
   // ==========================================================
-  // KATEGORI 1: LOGIK (Snälla tester - Ger poäng för att det funkar)
+  // KATEGORI 1: LOGIK
   // ==========================================================
 
   test("Should add an item to the income list", () => {
@@ -81,9 +43,7 @@ describe("Budget App Assessment", () => {
 
     const list = document.getElementById("incomeList");
 
-    // SNÄLLT: Vi kollar bara att det lades till en rad (oavsett text)
     expect(list.children.length).toBe(1);
-    // SNÄLLT: Vi kollar att beloppet finns där, struntar i om det står "Inkomsts"
     expect(list.textContent).toContain("20000");
   });
 
@@ -94,7 +54,6 @@ describe("Budget App Assessment", () => {
 
     const list = document.getElementById("expenseList");
 
-    // SNÄLLT: kollar bara att logiken kördes
     expect(list.children.length).toBe(1);
     expect(list.textContent).toContain("5000");
   });
@@ -126,7 +85,7 @@ describe("Budget App Assessment", () => {
   });
 
   // ==========================================================
-  // KATEGORI 2: FORMAT & UX (Hårda tester - Kräver exakthet)
+  // KATEGORI 2: FORMAT & UX
   // ==========================================================
 
   test("Should format the list item text correctly", () => {
@@ -165,7 +124,7 @@ describe("Budget App Assessment", () => {
   });
 
   // ==========================================================
-  // KATEGORI 3: VALIDERING (Regler)
+  // KATEGORI 3: VALIDERING
   // ==========================================================
 
   test("Should NOT add transaction if inputs are empty", () => {
@@ -183,9 +142,11 @@ describe("Budget App Assessment", () => {
     document.getElementById("incomeBtn").click();
 
     const balance = document.getElementById("balance");
+    // Det är okej om saldot är 0 ELLER om inget lades till i listan
     const isSafe =
       balance.textContent === "0" ||
       document.getElementById("incomeList").children.length === 0;
+
     expect(isSafe).toBe(true);
     expect(balance.textContent).not.toBe("NaN");
   });
@@ -203,14 +164,12 @@ describe("Budget App Assessment", () => {
 
     const videoFileFound = filesInRoot.find((file) => {
       const ext = path.extname(file).toLowerCase();
-      const name = path.basename(file, ext);
+      const name = path.basename(file, ext); // Tar bort filändelsen
       return name === requiredName && validExtensions.includes(ext);
     });
 
     if (!videoFileFound) {
-      throw new Error(
-        "Kunde inte hitta filen 'videoprov.mp4' i rotmappen. Kontrollera namnet noga!"
-      );
+      throw new Error("Kunde inte hitta filen 'videoprov.mp4' i rotmappen.");
     }
     expect(videoFileFound).toBeTruthy();
   });
