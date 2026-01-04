@@ -15,8 +15,8 @@ Innan du börjar koda **måste** du ange ditt Student-ID (ditt ansökningsnummer
 
 **Så här lägger du in det i koden:**
 
-1. Gå till filen `src/student-id.js`.
-2. Byt ut texten `"PUT_YOUR_ID_HERE"` mot ditt ansökningsnummer som du precis kopierade.
+1. Gå till filen `src/student.json`.
+2. Byt ut texten `"SKRIV_DITT_ID_HÄR"` mot ditt ansökningsnummer som du precis kopierade.
 3. Spara filen.
 
 ---
