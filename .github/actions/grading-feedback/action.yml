@@ -1,8 +1,11 @@
 name: "Grading Feedback"
-description: "Generates feedback table based on config"
+description: "Generates feedback table based on inputs"
 inputs:
   steps-context:
-    description: "JSON string of the steps context"
+    description: "JSON string of steps context"
+    required: true
+  grading-config:
+    description: "JSON string of grading config"
     required: true
 runs:
   using: "composite"
@@ -10,67 +13,102 @@ runs:
     - name: Skapa/Uppdatera Feedback
       uses: actions/github-script@v7
       env:
-        # Vi skickar in testresultaten säkert via miljövariabler
         STEPS_CONTEXT: ${{ inputs.steps-context }}
+        GRADING_CONFIG: ${{ inputs.grading-config }}
         STUDENT_ID: ${{ env.STUDENT_ID }}
       with:
         script: |
-          const fs = require('fs');
-          // Hämta resultaten från input
           const steps = JSON.parse(process.env.STEPS_CONTEXT);
           const githubUser = context.actor;
 
-          // 1. LÄS KONFIGURATION
+          // Läs config från input
           let tests = [];
           try {
-            const configPath = '.github/classroom/grading-config.json';
-            if (fs.existsSync(configPath)) {
-              tests = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-            } else {
-              console.log("::warning::Ingen grading-config.json hittades.");
-            }
-          } catch (e) { console.log("Config fel: " + e.message); }
+             tests = JSON.parse(process.env.GRADING_CONFIG);
+          } catch (e) { console.log("Config Error: " + e.message); }
 
-          // 2. BERÄKNA POÄNG
           let totalScore = 0;
           let maxScore = 0;
           let rows = [];
           let requiredTestFailed = false;
 
           for (const test of tests) {
-            const step = steps[test.id];
+            const testId = test.id;
+            let rawResult = "";
+
+            // --- SMART SÖKNING ---
+            // A. Direkt objekt
+            if (steps[testId] && steps[testId].outputs && steps[testId].outputs.result) {
+               rawResult = steps[testId].outputs.result;
+            } 
+            // B. Direkt sträng (ibland skickar composite actions rena strängar)
+            else if (steps[testId] && typeof steps[testId] === 'string') {
+               rawResult = steps[testId];
+            }
+            // C. Nestlat inuti outputs från ett annat steg
+            else {
+               for (const stepKey in steps) {
+                  if (steps[stepKey].outputs && steps[stepKey].outputs[testId]) {
+                     rawResult = steps[stepKey].outputs[testId];
+                     break;
+                  }
+               }
+            }
+            // ---------------------
+
             let passed = false;
-            if (step && step.outputs && step.outputs.result) {
-              const raw = step.outputs.result;
+            if (rawResult) {
               try {
-                const json = JSON.parse(Buffer.from(raw, 'base64').toString('utf-8'));
+                const decoded = Buffer.from(rawResult, 'base64').toString('utf-8');
+                const json = JSON.parse(decoded);
                 if (json.status === 'pass' || json.status === 'success') passed = true;
               } catch (e) {
-                if (raw === 'success' || raw === 'pass') passed = true;
+                if (rawResult === 'success' || rawResult === 'pass') passed = true;
               }
             }
+
             if (test.required && !passed) requiredTestFailed = true;
 
             const icon = passed ? '✅' : '❌';
             const score = passed ? test.points : 0;
-            totalScore += score;
+            
+            // Räkna poäng (om inte ett obligatoriskt test har misslyckats)
+            if (!requiredTestFailed) {
+                totalScore += score;
+            }
             maxScore += test.points;
+            
             rows.push(`| ${icon} | ${test.name} | ${score} / ${test.points} |`);
           }
 
-          // 3. BYGG MEDDELANDE
+          // Bygg kommentaren
           const studentId = process.env.STUDENT_ID || "Ej hittat";
           let commentBody = "";
           const botSignature = "";
 
           if (requiredTestFailed) {
-            commentBody = `## ⚠️ Obligatoriskt test misslyckades\n**Student:** @${githubUser}\n\nNågot grundläggande saknas (t.ex. ID eller kompilering).\nKontrollera loggarna.`;
+            commentBody = `
+            ## ⚠️ Obligatoriskt moment misslyckades
+            **Student:** @${githubUser}
+            
+            Vi kunde inte rätta hela uppgiften eftersom ett kritiskt steg (t.ex. ID-kontroll eller kompilering) misslyckades.
+            Vänligen kontrollera loggarna under "Actions".
+            `;
           } else {
-            commentBody = `## 🤖 Automatisk Rättning\n**Student:** @${githubUser}\n**Student ID:** ${studentId}\n**Totalt:** ${totalScore} / ${maxScore} poäng\n\n| Status | Test | Poäng |\n| :---: | :--- | :---: |\n${rows.join('\n')}`;
+            const tableHeader = `| Status | Test | Poäng |\n| :---: | :--- | :---: |`;
+            commentBody = `
+            ## 🤖 Automatisk Rättning
+            **Student:** @${githubUser}
+            **Student ID:** ${studentId}
+            **Totalt:** ${totalScore} / ${maxScore} poäng
+            
+            ${tableHeader}
+            ${rows.join('\n')}
+            `;
           }
           commentBody += `\n\n${botSignature}`;
 
-          // 4. POSTA KOMMENTAR
+          // Posta kommentaren
           try {
             const prs = await github.rest.pulls.list({ owner: context.repo.owner, repo: context.repo.repo, state: 'open' });
             if (prs.data.length > 0) {
@@ -84,4 +122,4 @@ runs:
                 await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: prNumber, body: commentBody });
               }
             }
-          } catch (e) { console.log("Kommentar fel: " + e.message); }
+          } catch (e) { console.log("Error commenting: " + e.message); }
