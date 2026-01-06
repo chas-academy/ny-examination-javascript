@@ -1,143 +1,69 @@
-name: "Run Grading Tests"
-description: "Runs all grading tests and defines the config dynamically"
-outputs:
-  grading-config:
-    value: ${{ steps.config.outputs.json }}
-
-  val-empty:
-    value: ${{ steps.val-empty.outputs.result }}
-  val-numbers:
-    value: ${{ steps.val-numbers.outputs.result }}
-  income-add:
-    value: ${{ steps.income-add.outputs.result }}
-  expense-add:
-    value: ${{ steps.expense-add.outputs.result }}
-  format-check:
-    value: ${{ steps.format-check.outputs.result }}
-  income-balance:
-    value: ${{ steps.income-balance.outputs.result }}
-  expense-balance:
-    value: ${{ steps.expense-balance.outputs.result }}
-  ux-clear:
-    value: ${{ steps.ux-clear.outputs.result }}
-  video-check:
-    value: ${{ steps.video-check.outputs.result }}
-
+name: "Run Grading"
+description: "Runs tests defined in autograding.json"
 runs:
   using: "composite"
   steps:
-    # --- STEG 1: LÄS CONFIG ---
-    - name: Set Grading Config
-      id: config
-      shell: bash
-      run: |
-        # Definiera ID-checken manuellt här
-        SETUP_JSON='[{"id": "id-check", "name": "Setup & ID Kontroll", "points": 0, "required": true}]'
-
-        # Kontrollera att filen finns
-        if [ ! -f .github/classroom/autograding.json ]; then
-          echo "::error::Hittade inte .github/classroom/autograding.json"
-          exit 1
-        fi
-
-        # Läs ut tester från filen
-        TESTS_JSON=$(jq -c '[.tests[] | {id: .id, name: .name, points: .points}]' .github/classroom/autograding.json)
-
-        # Slå ihop Setup + Tester
-        FULL_CONFIG=$(echo "$SETUP_JSON $TESTS_JSON" | jq -s '.[0] + .[1]')
-
-        # Spara till output
-        COMPACT_JSON=$(echo "$FULL_CONFIG" | jq -c .)
-        echo "json=$COMPACT_JSON" >> $GITHUB_OUTPUT
-
-    # --- STEG 2: KÖR TESTERNA ---
-
-    - name: "Validering: Tomma fält"
-      id: val-empty
-      uses: classroom-resources/autograding-command-grader@v1
+    - name: Run Tests & Report
+      uses: actions/github-script@v7
       with:
-        test-name: "Validering: Tomma fält"
-        command: npx jest -t 'Should NOT add transaction if inputs are empty'
-        timeout: 10
-        max-score: 10
-      continue-on-error: true
+        script: |
+          const fs = require('fs');
+          const cp = require('child_process');
 
-    - name: "Validering: Felaktiga tal"
-      id: val-numbers
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: "Validering: Felaktiga tal"
-        command: npx jest -t 'Should handle invalid numbers gracefully'
-        timeout: 10
-        max-score: 10
-      continue-on-error: true
+          // Läs config
+          const config = JSON.parse(fs.readFileSync('.github/classroom/autograding.json', 'utf8'));
 
-    - name: "Inkomst: Lägg till i listan"
-      id: income-add
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: "Inkomst: Lägg till i listan"
-        command: npx jest -t 'Should add an item to the income list'
-        timeout: 10
-        max-score: 10
-      continue-on-error: true
+          let results = [];
+          let totalPoints = 0;
+          let maxPoints = 0;
+          let failedRequired = false;
 
-    - name: "Utgift: Lägg till i listan"
-      id: expense-add
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: "Utgift: Lägg till i listan"
-        command: npx jest -t 'Should add an item to the expense list'
-        timeout: 10
-        max-score: 10
-      continue-on-error: true
+          console.log("\n🚀 Startar rättning av tester...\n");
 
-    - name: "Format: Rätt textformat"
-      id: format-check
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: "Format: Rätt textformat"
-        command: npx jest -t 'Should format the list item text correctly'
-        timeout: 10
-        max-score: 10
-      continue-on-error: true
+          for (const test of config.tests) {
+            maxPoints += test.points;
+            let passed = false;
+            
+            try {
+              console.log(`🏃 Kör: ${test.name}`);
+              // Kör testet med timeout
+              cp.execSync(test.run, { timeout: (test.timeout || 1) * 60000, stdio: 'pipe' });
+              
+              passed = true;
+              totalPoints += test.points;
+              console.log(`✅ GODKÄND (+${test.points}p)`);
+            } catch (e) {
+              console.log(`❌ EJ GODKÄND`);
+              if (test.required) {
+                 console.log(`   ⚠️ Detta var ett obligatoriskt test!`);
+                 failedRequired = true;
+              }
+            }
+            
+            // Spara data för feedback-steget
+            results.push({
+              name: test.name,
+              points: test.points,
+              score: passed ? test.points : 0,
+              passed: passed
+            });
+          }
 
-    - name: "Inkomst: Uppdatera saldo"
-      id: income-balance
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: "Inkomst: Uppdatera saldo"
-        command: npx jest -t 'Should increase balance when income is added'
-        timeout: 10
-        max-score: 10
-      continue-on-error: true
+          // --- RAPPORTERA TILL GITHUB CLASSROOM ---
+          const text = `Points ${totalPoints}/${maxPoints}`;
+          const summary = JSON.stringify({ totalPoints, maxPoints });
 
-    - name: "Utgift: Uppdatera saldo"
-      id: expense-balance
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: "Utgift: Uppdatera saldo"
-        command: npx jest -t 'Should decrease balance when expense is added'
-        timeout: 10
-        max-score: 10
-      continue-on-error: true
+          core.notice(text, { title: "Autograding complete" });
+          core.notice(summary, { title: "Autograding report" });
 
-    - name: "UX: Töm fält efter köp"
-      id: ux-clear
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: "UX: Töm fält efter köp"
-        command: npx jest -t 'Should clear input fields after adding transaction'
-        timeout: 10
-        max-score: 10
-      continue-on-error: true
+          console.log(`\n-------------------------`);
+          console.log(text);
+          console.log(`-------------------------\n`);
 
-    - name: "Inlämning: Videoprov"
-      id: video-check
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: "Inlämning: Videoprov"
-        command: npx jest -t 'Should contain a video file named'
-        timeout: 10
-        max-score: 20
-      continue-on-error: true
+          // Spara resultaten till fil så nästa action kan läsa dem
+          fs.writeFileSync('grading-results.json', JSON.stringify(results));
+
+          // Markera som fail om obligatoriska moment misslyckades
+          if (failedRequired) {
+            core.setFailed('❌ Ett eller flera obligatoriska moment misslyckades.');
+          }

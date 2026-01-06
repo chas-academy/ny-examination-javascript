@@ -1,125 +1,105 @@
 name: "Grading Feedback"
-description: "Generates feedback table based on inputs"
-inputs:
-  steps-context:
-    description: "JSON string of steps context"
-    required: true
-  grading-config:
-    description: "JSON string of grading config"
-    required: true
+description: "Posts feedback table to PR"
 runs:
   using: "composite"
   steps:
-    - name: Skapa/Uppdatera Feedback
+    - name: Post Comment
       uses: actions/github-script@v7
-      env:
-        STEPS_CONTEXT: ${{ inputs.steps-context }}
-        GRADING_CONFIG: ${{ inputs.grading-config }}
-        STUDENT_ID: ${{ env.STUDENT_ID }}
       with:
         script: |
-          const steps = JSON.parse(process.env.STEPS_CONTEXT);
-          const githubUser = context.actor;
+          const fs = require('fs');
 
-          // Läs config från input
-          let tests = [];
-          try {
-             tests = JSON.parse(process.env.GRADING_CONFIG);
-          } catch (e) { console.log("Config Error: " + e.message); }
+          let body = "";
+          const runNumber = context.runNumber;
+          const now = new Date().toLocaleString('sv-SE', { 
+            timeZone: 'Europe/Stockholm',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit'
+          });
 
-          let totalScore = 0;
-          let maxScore = 0;
-          let rows = [];
-          let requiredTestFailed = false;
+          // 1. KOLLA OM RESULTAT FINNS
+          if (fs.existsSync('grading-results.json')) {
+            const results = JSON.parse(fs.readFileSync('grading-results.json', 'utf8'));
+            const studentId = process.env.STUDENT_ID || "Okänd";
 
-          for (const test of tests) {
-            const testId = test.id;
-            let rawResult = "";
+            const totalPoints = results.reduce((sum, r) => sum + r.score, 0);
+            const maxPoints = results.reduce((sum, r) => sum + r.points, 0);
 
-            // --- SMART SÖKNING ---
-            // A. Direkt objekt
-            if (steps[testId] && steps[testId].outputs && steps[testId].outputs.result) {
-               rawResult = steps[testId].outputs.result;
-            } 
-            // B. Direkt sträng (ibland skickar composite actions rena strängar)
-            else if (steps[testId] && typeof steps[testId] === 'string') {
-               rawResult = steps[testId];
-            }
-            // C. Nestlat inuti outputs från ett annat steg
-            else {
-               for (const stepKey in steps) {
-                  if (steps[stepKey].outputs && steps[stepKey].outputs[testId]) {
-                     rawResult = steps[stepKey].outputs[testId];
-                     break;
-                  }
-               }
-            }
-            // ---------------------
+            const rows = results.map(r => 
+              `| ${r.passed ? '✅' : '❌'} | ${r.name} | ${r.score} / ${r.points} |`
+            ).join('\n');
 
-            let passed = false;
-            if (rawResult) {
-              try {
-                const decoded = Buffer.from(rawResult, 'base64').toString('utf-8');
-                const json = JSON.parse(decoded);
-                if (json.status === 'pass' || json.status === 'success') passed = true;
-              } catch (e) {
-                if (rawResult === 'success' || rawResult === 'pass') passed = true;
-              }
-            }
-
-            if (test.required && !passed) requiredTestFailed = true;
-
-            const icon = passed ? '✅' : '❌';
-            const score = passed ? test.points : 0;
-            
-            // Räkna poäng (om inte ett obligatoriskt test har misslyckats)
-            if (!requiredTestFailed) {
-                totalScore += score;
-            }
-            maxScore += test.points;
-            
-            rows.push(`| ${icon} | ${test.name} | ${score} / ${test.points} |`);
-          }
-
-          // Bygg kommentaren
-          const studentId = process.env.STUDENT_ID || "Ej hittat";
-          let commentBody = "";
-          const botSignature = "";
-
-          if (requiredTestFailed) {
-            commentBody = `
-            ## ⚠️ Obligatoriskt moment misslyckades
-            **Student:** @${githubUser}
-            
-            Vi kunde inte rätta hela uppgiften eftersom ett kritiskt steg (t.ex. ID-kontroll eller kompilering) misslyckades.
-            Vänligen kontrollera loggarna under "Actions".
-            `;
-          } else {
-            const tableHeader = `| Status | Test | Poäng |\n| :---: | :--- | :---: |`;
-            commentBody = `
+            body = `
             ## 🤖 Automatisk Rättning
-            **Student:** @${githubUser}
-            **Student ID:** ${studentId}
-            **Totalt:** ${totalScore} / ${maxScore} poäng
+            **Student:** ${studentId}
+            **Resultat:** ${totalPoints} / ${maxPoints} poäng
+            **Försök:** #${runNumber}
             
-            ${tableHeader}
-            ${rows.join('\n')}
+            | Status | Uppgift | Poäng |
+            | :---: | :--- | :---: |
+            ${rows}
+            
+            *(Kördes: ${now})*
+            `;
+
+          } else {
+            console.log("Ingen resultatsfil hittades. Antar setup-fel.");
+            
+            body = `
+            ## ⚠️ Automatisk Rättning Misslyckades
+            **Status:** ❌ Setup misslyckades
+            **Försök:** #${runNumber}
+
+            Botten kunde inte köra dina tester. Detta beror oftast på:
+            1. **student.json** saknas eller har fel format.
+            2. Du har inte fyllt i **student_id** korrekt.
+            3. Ett kritiskt fel i koden (syntax error) stoppade starten.
+
+            🔍 **Åtgärd:** Kontrollera fliken "Checks" här på GitHub för att se exakt vad som gick fel.
+            
+            *(Kördes: ${now})*
             `;
           }
-          commentBody += `\n\n${botSignature}`;
 
-          // Posta kommentaren
+          // --- 2. HITTA PR OCH POSTA ---
           try {
-            const prs = await github.rest.pulls.list({ owner: context.repo.owner, repo: context.repo.repo, state: 'open' });
+            const prs = await github.rest.pulls.list({ 
+              owner: context.repo.owner, 
+              repo: context.repo.repo, 
+              state: 'open' 
+            });
+
             if (prs.data.length > 0) {
               const prNumber = prs.data[0].number;
-              const comments = await github.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: prNumber });
-              const botComment = comments.data.find(c => c.body.includes(botSignature));
               
+              const comments = await github.rest.issues.listComments({ 
+                owner: context.repo.owner, 
+                repo: context.repo.repo, 
+                issue_number: prNumber 
+              });
+              
+              const botComment = comments.data.find(c => c.body.includes('## 🤖 Automatisk Rättning') || c.body.includes('## ⚠️ Automatisk Rättning Misslyckades'));
+
               if (botComment) {
-                await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: botComment.id, body: commentBody });
+                await github.rest.issues.updateComment({ 
+                  owner: context.repo.owner, 
+                  repo: context.repo.repo, 
+                  comment_id: botComment.id, 
+                  body: body 
+                });
+                console.log("Uppdaterade kommentar.");
               } else {
-                await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: prNumber, body: commentBody });
+                await github.rest.issues.createComment({ 
+                  owner: context.repo.owner, 
+                  repo: context.repo.repo, 
+                  issue_number: prNumber, 
+                  body: body 
+                });
+                console.log("Skapade ny kommentar.");
               }
+            } else {
+              console.log("Ingen öppen PR hittades.");
             }
-          } catch (e) { console.log("Error commenting: " + e.message); }
+          } catch (e) {
+            console.log("Kunde inte posta kommentar: " + e.message);
+          }
