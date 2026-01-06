@@ -1,11 +1,9 @@
 name: "Run Grading Tests"
-description: "Runs all grading tests and defines the config"
+description: "Runs all grading tests and defines the config dynamically"
 outputs:
-  # 1. EXPORTERA KONFIGURATIONEN
   grading-config:
     value: ${{ steps.config.outputs.json }}
 
-  # 2. EXPORTERA RESULTATEN FRÅN TESTERNA HÄR
   val-empty:
     value: ${{ steps.val-empty.outputs.result }}
   val-numbers:
@@ -28,26 +26,27 @@ outputs:
 runs:
   using: "composite"
   steps:
-    # --- STEG 1: POÄNG OCH NAMN ---
+    # --- STEG 1: LÄS CONFIG ---
     - name: Set Grading Config
       id: config
       shell: bash
       run: |
-        read -r -d '' JSON_BLOCK << EOM
-        [
-          { "id": "val-empty", "name": "Validering: Tomma fält", "points": 10 },
-          { "id": "val-numbers", "name": "Validering: Felaktiga tal", "points": 10 },
-          { "id": "income-add", "name": "Inkomst: Lägg till i listan", "points": 10 },
-          { "id": "expense-add", "name": "Utgift: Lägg till i listan", "points": 10 },
-          { "id": "format-check", "name": "Format: Rätt textformat", "points": 10 },
-          { "id": "income-balance", "name": "Inkomst: Uppdatera saldo", "points": 10 },
-          { "id": "expense-balance", "name": "Utgift: Uppdatera saldo", "points": 10 },
-          { "id": "ux-clear", "name": "UX: Töm fält efter köp", "points": 10 },
-          { "id": "video-check", "name": "Inlämning: Videoprov", "points": 20 }
-        ]
-        EOM
-        # Minifiera JSON och spara till output
-        COMPACT_JSON=$(echo "$JSON_BLOCK" | jq -c .)
+        # 1. Kontrollera att autograding.json finns
+        if [ ! -f .github/classroom/autograding.json ]; then
+          echo "::error::Hittade inte .github/classroom/autograding.json"
+          exit 1
+        fi
+
+        # 2. Läs ut id, name och points från filen med jq
+        # Vi transformerar strukturen för att matcha det enkla formatet
+        TESTS_JSON=$(jq -c '[.tests[] | {id: .id, name: .name, points: .points}]' .github/classroom/autograding.json)
+
+        # 4. Slå ihop listorna (Setup först, sen testerna)
+        # Vi använder jq för att slå ihop arrayerna
+        FULL_CONFIG=$(echo "$SETUP_JSON $TESTS_JSON" | jq -s '.[0] + .[1]')
+
+        # 5. Minifiera och spara till output
+        COMPACT_JSON=$(echo "$FULL_CONFIG" | jq -c .)
         echo "json=$COMPACT_JSON" >> $GITHUB_OUTPUT
 
     # --- STEG 2: KÖR TESTERNA ---

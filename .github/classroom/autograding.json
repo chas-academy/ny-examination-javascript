@@ -1,0 +1,103 @@
+{
+  "tests": [
+    {
+      "id": "val-empty",
+      "name": "Validering: Tomma fält",
+      "setup": "npm ci",
+      "run": "npx jest -t 'Should NOT add transaction if inputs are empty'",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": 10
+    },
+    {
+      "id": "val-numbers",
+      "name": "Validering: Felaktiga tal",
+      "setup": "npm ci",
+      "run": "npx jest -t 'Should handle invalid numbers gracefully'",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": 10
+    },
+    {
+      "id": "income-add",
+      "name": "Inkomst: Lägg till i listan",
+      "setup": "npm ci",
+      "run": "npx jest -t 'Should add an item to the income list'",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": 10
+    },
+    {
+      "id": "expense-add",
+      "name": "Utgift: Lägg till i listan",
+      "setup": "npm ci",
+      "run": "npx jest -t 'Should add an item to the expense list'",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": 10
+    },
+    {
+      "id": "format-check",
+      "name": "Format: Rätt textformat",
+      "setup": "npm ci",
+      "run": "npx jest -t 'Should format the list item text correctly'",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": 10
+    },
+    {
+      "id": "income-balance",
+      "name": "Inkomst: Uppdatera saldo",
+      "setup": "npm ci",
+      "run": "npx jest -t 'Should increase balance when income is added'",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": 10
+    },
+    {
+      "id": "expense-balance",
+      "name": "Utgift: Uppdatera saldo",
+      "setup": "npm ci",
+      "run": "npx jest -t 'Should decrease balance when expense is added'",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": 10
+    },
+    {
+      "id": "ux-clear",
+      "name": "UX: Töm fält efter köp",
+      "setup": "npm ci",
+      "run": "npx jest -t 'Should clear input fields after adding transaction'",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": 10
+    },
+    {
+      "id": "video-check",
+      "name": "Inlämning: Videoprov",
+      "setup": "npm ci",
+      "run": "npx jest -t 'Should contain a video file named'",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": 20
+    }
+  ]
+}

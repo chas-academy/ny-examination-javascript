@@ -30,15 +30,6 @@ jobs:
         id: grading
         uses: ./.github/actions/run-grading
 
-      # --- 3. RAPPORTERING ---
-
-      - name: Rapportera till Dashboard
-        if: always()
-        uses: ./.github/actions/dashboard-reporter
-        with:
-          steps-context: ${{ toJSON(steps) }}
-          grading-config: ${{ steps.grading.outputs.grading-config }}
-
       - name: Skapa Feedback
         if: always()
         uses: ./.github/actions/grading-feedback
