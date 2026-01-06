@@ -25,14 +25,33 @@ jobs:
         id: id-check
         uses: ./.github/actions/setup-student
 
-      # --- 2. KÖR TESTER & HÄMTA CONFIG ---
+      # --- 2. KÖR TESTER  ---
       - name: Kör Grading
         id: grading
         uses: ./.github/actions/run-grading
+
+      # --- 3. RAPPORTERA TILL DASHBOARD ---
+      - name: Autograding Reporter
+        uses: classroom-resources/autograding-grading-reporter@v1
+        env:
+          VAL-EMPTY_RESULTS: "${{ steps.grading.outputs.val-empty }}"
+          VAL-NUMBERS_RESULTS: "${{ steps.grading.outputs.val-numbers }}"
+          INCOME-ADD_RESULTS: "${{ steps.grading.outputs.income-add }}"
+          EXPENSE-ADD_RESULTS: "${{ steps.grading.outputs.expense-add }}"
+          FORMAT-CHECK_RESULTS: "${{ steps.grading.outputs.format-check }}"
+          INCOME-BALANCE_RESULTS: "${{ steps.grading.outputs.income-balance }}"
+          EXPENSE-BALANCE_RESULTS: "${{ steps.grading.outputs.expense-balance }}"
+          UX-CLEAR_RESULTS: "${{ steps.grading.outputs.ux-clear }}"
+          VIDEO-CHECK_RESULTS: "${{ steps.grading.outputs.video-check }}"
+        with:
+          runners: val-empty,val-numbers,income-add,expense-add,format-check,income-balance,expense-balance,ux-clear,video-check
+
+      # --- 4. SKAPA FEEDBACK ---
 
       - name: Skapa Feedback
         if: always()
         uses: ./.github/actions/grading-feedback
         with:
+          # Vi skickar in hela steps-contextet för säkerhets skull, men configen kommer från grading
           steps-context: ${{ toJSON(steps) }}
           grading-config: ${{ steps.grading.outputs.grading-config }}

@@ -31,21 +31,22 @@ runs:
       id: config
       shell: bash
       run: |
-        # 1. Kontrollera att autograding.json finns
+        # Definiera ID-checken manuellt här
+        SETUP_JSON='[{"id": "id-check", "name": "Setup & ID Kontroll", "points": 0, "required": true}]'
+
+        # Kontrollera att filen finns
         if [ ! -f .github/classroom/autograding.json ]; then
           echo "::error::Hittade inte .github/classroom/autograding.json"
           exit 1
         fi
 
-        # 2. Läs ut id, name och points från filen med jq
-        # Vi transformerar strukturen för att matcha det enkla formatet
+        # Läs ut tester från filen
         TESTS_JSON=$(jq -c '[.tests[] | {id: .id, name: .name, points: .points}]' .github/classroom/autograding.json)
 
-        # 4. Slå ihop listorna (Setup först, sen testerna)
-        # Vi använder jq för att slå ihop arrayerna
+        # Slå ihop Setup + Tester
         FULL_CONFIG=$(echo "$SETUP_JSON $TESTS_JSON" | jq -s '.[0] + .[1]')
 
-        # 5. Minifiera och spara till output
+        # Spara till output
         COMPACT_JSON=$(echo "$FULL_CONFIG" | jq -c .)
         echo "json=$COMPACT_JSON" >> $GITHUB_OUTPUT
 

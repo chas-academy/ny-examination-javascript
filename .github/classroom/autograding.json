@@ -3,7 +3,7 @@
     {
       "id": "val-empty",
       "name": "Validering: Tomma fält",
-      "setup": "npm ci",
+      "setup": "",
       "run": "npx jest -t 'Should NOT add transaction if inputs are empty'",
       "input": "",
       "output": "",
@@ -14,7 +14,7 @@
     {
       "id": "val-numbers",
       "name": "Validering: Felaktiga tal",
-      "setup": "npm ci",
+      "setup": "",
       "run": "npx jest -t 'Should handle invalid numbers gracefully'",
       "input": "",
       "output": "",
@@ -25,7 +25,7 @@
     {
       "id": "income-add",
       "name": "Inkomst: Lägg till i listan",
-      "setup": "npm ci",
+      "setup": "",
       "run": "npx jest -t 'Should add an item to the income list'",
       "input": "",
       "output": "",
@@ -36,7 +36,7 @@
     {
       "id": "expense-add",
       "name": "Utgift: Lägg till i listan",
-      "setup": "npm ci",
+      "setup": "",
       "run": "npx jest -t 'Should add an item to the expense list'",
       "input": "",
       "output": "",
@@ -47,7 +47,7 @@
     {
       "id": "format-check",
       "name": "Format: Rätt textformat",
-      "setup": "npm ci",
+      "setup": "",
       "run": "npx jest -t 'Should format the list item text correctly'",
       "input": "",
       "output": "",
@@ -58,7 +58,7 @@
     {
       "id": "income-balance",
       "name": "Inkomst: Uppdatera saldo",
-      "setup": "npm ci",
+      "setup": "",
       "run": "npx jest -t 'Should increase balance when income is added'",
       "input": "",
       "output": "",
@@ -69,7 +69,7 @@
     {
       "id": "expense-balance",
       "name": "Utgift: Uppdatera saldo",
-      "setup": "npm ci",
+      "setup": "",
       "run": "npx jest -t 'Should decrease balance when expense is added'",
       "input": "",
       "output": "",
@@ -80,7 +80,7 @@
     {
       "id": "ux-clear",
       "name": "UX: Töm fält efter köp",
-      "setup": "npm ci",
+      "setup": "",
       "run": "npx jest -t 'Should clear input fields after adding transaction'",
       "input": "",
       "output": "",
@@ -91,7 +91,7 @@
     {
       "id": "video-check",
       "name": "Inlämning: Videoprov",
-      "setup": "npm ci",
+      "setup": "",
       "run": "npx jest -t 'Should contain a video file named'",
       "input": "",
       "output": "",
