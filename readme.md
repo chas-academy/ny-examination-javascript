@@ -4,7 +4,11 @@ Välkommen till detta arbetsprov i JavaScript! Din uppgift är att skriva logike
 
 ⚠️ **VIKTIGT: LÄS DETTA FÖRST** ⚠️
 
-Innan du börjar koda **måste** du ange ditt Student-ID (ditt ansökningsnummer). Om du inte gör detta kommer inga av dina tester att köras och du får 0 poäng.
+Du får **inte** göra ändringar i .github, script.test.js eller ändra testets funktioner. Detta ogiltigförklarar ditt test och rapporteras till antagningen.
+
+**Innan** du börjar koda måste du ställa in ditt projekt. Om du inte gör detta kommer inga av dina tester att köras korrekt.
+
+Se till att du ändrar inställningen för `"submitted": false` till `"submitted": true` när du känner dig redo för inlämning.
 
 **Så här hittar du ditt ID:**
 
@@ -17,7 +21,8 @@ Innan du börjar koda **måste** du ange ditt Student-ID (ditt ansökningsnummer
 
 1. Gå till filen `src/student.json`.
 2. Byt ut texten `"SKRIV_DITT_ID_HÄR"` mot ditt ansökningsnummer som du precis kopierade.
-3. Spara filen.
+3. Låt `"submitted": false` vara kvar så länge du arbetar med provet och ändra den sedan till `"submitted": true` när du är klar.
+4. Spara filen.
 
 ---
 
@@ -72,14 +77,20 @@ Förutom koden ska du spela in en kort skärminspelning där du demonstrerar din
 
 ---
 
+## Hur du kör din kod
+
+Vi rekommenderar dig att installera extensionen som heter "Live Server" i VsCode för att starta index.html och se dina ändringar.
+
 ## Hur du testar din kod
 
-Du kan testa din kod lokalt.
+Du kan testa din kod lokalt eller kolla på github under pull requests > feedback.
+
+Hur du testar lokalt:
 
 1.  Öppna en terminal.
 2.  Kör kommandot: `npm install` (behövs bara göras en gång).
 3.  Kör kommandot: `npm test`
 
-Kontrollera slutligen feedback botens resultat. (Du hittar den under pull requests på github.)
+Kontrollera slutligen feedback botens resultat och kom ihåg att ändra flaggan `"submitted": false` till `"submitted": true` när du ska lämna in.
 
 Lycka till!
