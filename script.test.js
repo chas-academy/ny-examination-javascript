@@ -128,26 +128,46 @@ describe("Budget App Assessment", () => {
   // ==========================================================
 
   test("Should NOT add transaction if inputs are empty", () => {
+    // Vi lägger först till en GILTIG transaktion för att se om knappen ens fungerar.
+    document.getElementById("desc").value = "Kontroll";
+    document.getElementById("amount").value = "100";
+    document.getElementById("incomeBtn").click();
+
+    const list = document.getElementById("incomeList");
+
+    if (list.children.length === 0) {
+      throw new Error(
+        "TESTET MISSLYCKADES: Kan inte verifiera validering eftersom funktionen för att lägga till inkomst inte fungerar än."
+      );
+    }
+
     document.getElementById("desc").value = "";
     document.getElementById("amount").value = "";
     document.getElementById("incomeBtn").click();
 
-    const list = document.getElementById("incomeList");
-    expect(list.children.length).toBe(0);
+    expect(list.children.length).toBe(1);
   });
 
   test("Should handle invalid numbers gracefully", () => {
+    document.getElementById("desc").value = "Kontroll";
+    document.getElementById("amount").value = "100";
+    document.getElementById("incomeBtn").click();
+
+    const list = document.getElementById("incomeList");
+
+    if (list.children.length === 0) {
+      throw new Error(
+        "TESTET MISSLYCKADES: Kan inte verifiera nummer-validering eftersom funktionen för att lägga till inkomst inte fungerar än."
+      );
+    }
+
     document.getElementById("desc").value = "Fel";
     document.getElementById("amount").value = "hej";
     document.getElementById("incomeBtn").click();
 
-    const balance = document.getElementById("balance");
-    // Det är okej om saldot är 0 ELLER om inget lades till i listan
-    const isSafe =
-      balance.textContent === "0" ||
-      document.getElementById("incomeList").children.length === 0;
+    expect(list.children.length).toBe(1);
 
-    expect(isSafe).toBe(true);
+    const balance = document.getElementById("balance");
     expect(balance.textContent).not.toBe("NaN");
   });
 
