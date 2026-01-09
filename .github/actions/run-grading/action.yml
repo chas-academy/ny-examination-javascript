@@ -63,7 +63,4 @@ runs:
           // Spara resultaten till fil så nästa action kan läsa dem
           fs.writeFileSync('grading-results.json', JSON.stringify(results));
 
-          // Markera som fail om obligatoriska moment misslyckades
-          if (failedRequired) {
-            core.setFailed('❌ Ett eller flera obligatoriska moment misslyckades.');
-          }
+          fs.writeFileSync('grading-status.json', JSON.stringify({ failedRequired: failedRequired }));
