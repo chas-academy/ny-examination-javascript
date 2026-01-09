@@ -1,9 +1,9 @@
 name: "Setup Student ID"
-description: "Reads and validates student ID"
+description: "Reads and validates student ID and submission status"
 runs:
   using: "composite"
   steps:
-    - name: Kontrollera ID
+    - name: Kontrollera ID och Status
       shell: bash
       run: |
         # 1. Kontrollera filen
@@ -20,6 +20,12 @@ runs:
            exit 1
         fi
 
-        # 3. Spara till ENV så alla andra steg ser det
+        # 3. Läs submission status (Default till false om den saknas)
+        SUBMITTED=$(jq -r '.submitted // false' student.json)
+
+        # 4. Spara till ENV
         echo "STUDENT_ID=$ID" >> $GITHUB_ENV
+        echo "STUDENT_SUBMITTED=$SUBMITTED" >> $GITHUB_ENV
+
         echo "✅ Student ID: $ID"
+        echo "📝 Submitted status: $SUBMITTED"
